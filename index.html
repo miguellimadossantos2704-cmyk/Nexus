@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS OS | INTEGRATED SYSTEM</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --dark-blue: #001a23;
+            --border-color: #003d4d;
+            --bg-black: #050505;
+            --stark-red: #ff003c;
+            --streak-orange: #ffaa00;
+            --weekly-purple: #bc00ff;
+            --deep-work-green: #00ff66;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            text-transform: uppercase;
+        }
+
+        nav {
+            background: var(--dark-blue);
+            display: flex;
+            border-top: 2px solid var(--neon-blue);
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            z-index: 100;
+        }
+
+        nav button {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-right: 1px solid var(--border-color);
+            color: #555;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.6rem;
+            padding: 15px 0;
+            cursor: pointer;
+        }
+
+        nav button.active {
+            color: var(--neon-blue);
+            background: rgba(0, 243, 255, 0.05);
+        }
+
+        .screen {
+            display: none;
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--dark-blue);
+            border: 2px solid var(--border-color);
+            padding: 15px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .card.weekly {
+            border-color: var(--weekly-purple);
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-blue);
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--neon-blue);
+            padding-left: 10px;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-weekly {
+            border-color: var(--weekly-purple);
+            color: var(--weekly-purple);
+        }
+
+        .btn-deepwork {
+            border-color: var(--deep-work-green);
+            color: var(--deep-work-green);
+            animation: pulse-border 2s infinite;
+        }
+
+        .btn-weekly:hover {
+            background: var(--weekly-purple);
+            color: #000;
+        }
+
+        .btn-action:hover {
+            background: var(--neon-blue);
+            color: #000;
+        }
+
+        .btn-deepwork:hover {
+            background: var(--deep-work-green);
+            color: #000;
+        }
+
+        .done {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .streak-counter {
+            font-family: 'Orbitron';
+            color: var(--streak-orange);
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .combo-counter {
+            font-family: 'JetBrains Mono';
+            color: var(--deep-work-green);
+            font-size: 0.8rem;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 0 5px var(--deep-work-green);
+            display: none;
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        /* Deep Work Screen */
+        #deepwork {
+            text-align: center;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #000;
+            z-index: 200;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        #deepwork.active {
+            display: flex;
+        }
+
+        .timer-display {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            color: var(--deep-work-green);
+            text-shadow: 0 0 20px var(--deep-work-green);
+            margin: 30px 0;
+        }
+
+        .ring {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            border: 4px solid #111;
+            border-top-color: var(--deep-work-green);
+            animation: spin 2s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        .timer-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        @keyframes pulse-border {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 255, 102, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 102, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="inicio" class="screen active">
+        <h1>[ STATUS_CORE ]</h1>
+        <div class="streak-counter" id="streak-display">🔥 STREAK: 0 DAYS</div>
+        <div class="combo-counter" id="combo-display">[ COMBO CÉREBRO ATIVO: 1.5x XP ]</div>
+        <div class="card">
+            <div class="chart-container">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </div>
+
+        <h1 style="margin-top: 30px; font-size: 0.9rem;">[ HISTÓRICO DE EVOLUÇÃO ]</h1>
+        <div class="card">
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div id="diarias" class="screen">
+        <h1>[ DAILY_LOG ]</h1>
+        <div id="daily-list"></div>
+    </div>
+
+    <div id="semanais" class="screen">
+        <h1>[ WEEKLY_LOG ]</h1>
+        <div id="weekly-list"></div>
+        <button class="btn-action" style="border-color:#555; color:#555;" onclick="triggerWeeklyReset()">REINICIAR
+            SEMANA / SALVAR LOG</button>
+    </div>
+
+    <div id="config" class="screen">
+        <h1>[ SETTINGS ]</h1>
+        <div class="card">
+            <p style="font-size: 0.7rem; color: #888; margin-bottom: 20px;">Use o modo Karoline para acessar atalhos
+                rápidos do sistema superior.</p>
+            <button class="btn-action" style="border-color: var(--stark-red); color: var(--stark-red);"
+                onclick="resetAll()">PURGE_MEMORY</button>
+        </div>
+    </div>
+
+    <div id="karoline" class="screen">
+        <h1>[ KAROLINE ]</h1>
+        <div class="card">
+            <a href="https://gemini.google.com/app/8c6aa24bb55676d7" target="_blank" class="btn-action"
+                style="display: block; text-align: center; text-decoration: none; box-sizing: border-box; color: var(--neon-blue);">ACESSAR
+                KAROLINE</a>
+        </div>
+    </div>
+
+    <!-- Deep Work Screen (Overlay) -->
+    <div id="deepwork">
+        <h2 style="color: var(--deep-work-green); letter-spacing: 5px;">[ DEEP WORK ]</h2>
+        <div class="timer-container">
+            <div class="ring" id="timer-ring"></div>
+            <div class="timer-display" id="timer">60:00</div>
+        </div>
+        <p style="color: #666; font-size: 0.8rem; max-width: 80%;">Som de baixa frequência ativado. Foco total. Não
+            feche o sistema.</p>
+        <button class="btn-action"
+            style="border-color: var(--stark-red); color: var(--stark-red); width: 200px; margin-top: 40px;"
+            onclick="abortDeepWork()">ABORTAR MISSÃO</button>
+
+        <!-- Audio element for lofi/synthwave -->
+        <audio id="focus-audio" loop>
+            <source src="https://stream.zeno.fm/f3wvbbqmdg8uv" type="audio/mpeg">
+            <!-- Lofi Girl Stream alternative if the above fails, using HTML5 audio -->
+        </audio>
+    </div>
+
+    <nav id="main-nav">
+        <button onclick="showScreen('inicio')" id="btn-inicio" class="active">CORE</button>
+        <button onclick="showScreen('diarias')" id="btn-diarias">DAILY</button>
+        <button onclick="showScreen('semanais')" id="btn-semanais">WEEKLY</button>
+        <button onclick="showScreen('config')" id="btn-config">CONFIG</button>
+        <button onclick="showScreen('karoline')" id="btn-karoline">KAROLINE</button>
+    </nav>
+
+    <script>
+        // Data Initialization
+        let stats = JSON.parse(localStorage.getItem('nexusStats')) || {
+            foco: 30, fitness: 30, consistencia: 30, social: 30, conquistas: 30, disciplina: 30
+        };
+
+        let historyStats = JSON.parse(localStorage.getItem('nexusHistory')) || [];
+
+        let cerebroCombo = parseInt(localStorage.getItem('cerebroCombo')) || 0;
+        let lastComboCheck = localStorage.getItem('lastComboCheck');
+
+        const dailyMissions = [
+            { id: 'st1', label: '🧠 CÉREBRO: DEEP WORK 1H', type: 'foco', xp: 15 },
+            { id: 'st2', label: '📖 CÉREBRO: CONCEITO NOVO', type: 'foco', xp: 10 },
+            { id: 'st3', label: '✍️ CÉREBRO: ESCREVER APRENDIZADO', type: 'foco', xp: 10 },
+            { id: 'st4', label: '🧩 CÉREBRO+: PROBLEMA DIFÍCIL', type: 'foco', xp: 20 },
+            { id: 'st5', label: '📚 CÉREBRO+: LER 10 PÁGINAS', type: 'foco', xp: 10 },
+            { id: 'st6', label: '💻 DEV: CODAR 1H', type: 'conquistas', xp: 15 },
+            { id: 'st7', label: '🚀 DEV: PROJETO PESSOAL', type: 'conquistas', xp: 15 },
+            { id: 'st8', label: '🔧 DEV: BUG OU REFATORAÇÃO', type: 'conquistas', xp: 10 },
+            { id: 'st9', label: '📦 DEV+: FEATURE PEQUENA', type: 'conquistas', xp: 20 },
+            { id: 'st10', label: '📈 DEV+: COMMIT ESTRATÉGICO', type: 'conquistas', xp: 10 },
+            { id: 'st11', label: '🏋️ CORPO: TREINO CONCLUÍDO', type: 'fitness', xp: 20 },
+            { id: 'st12', label: '💧 CORPO: HIDRATAÇÃO IDEAL', type: 'consistencia', xp: 5 },
+            { id: 'st13', label: '🥗 CORPO: DIETA ALINHADA', type: 'consistencia', xp: 15 },
+            { id: 'st14', label: '🧍 CORPO: POSTURA E PRESENÇA', type: 'social', xp: 5 },
+            { id: 'st15', label: '🧘 CORPO+: MOBILIDADE/ABD', type: 'fitness', xp: 10 },
+            { id: 'st16', label: '💰 FINANÇAS: REGISTRAR GASTOS', type: 'disciplina', xp: 10 },
+            { id: 'st17', label: '🚫 FINANÇAS: EVITAR GASTO EXTRA', type: 'disciplina', xp: 10 },
+            { id: 'st18', label: '📊 FINANÇAS: IDEIA RENDA FUTURA', type: 'conquistas', xp: 15 },
+            { id: 'st19', label: '📈 FINANÇAS+: ESTUDAR INVESTIMENTOS', type: 'foco', xp: 10 },
+            { id: 'st20', label: '🛠️ FINANÇAS+: ALGO MONETIZÁVEL', type: 'conquistas', xp: 20 },
+            { id: 'st21', label: '⏰ MENTALIDADE: SEM SONECA', type: 'disciplina', xp: 10 },
+            { id: 'st22', label: '📵 MENTALIDADE: REDUZIR REDES', type: 'disciplina', xp: 10 },
+            { id: 'st23', label: '🎯 MENTALIDADE: CUMPRIR PROMESSA', type: 'consistencia', xp: 20 }
+        ];
+
+        const weeklyMissions = [
+            { id: 'w1', label: '🚀 PROJETO: FINALIZAR FEATURE CHAVE', type: 'conquistas', xp: 50 },
+            { id: 'w2', label: '📚 ESTUDO: LER 1 LIVRO/ARTIGO', type: 'foco', xp: 40 },
+            { id: 'w3', label: '🔥 CORPO: 5 TREINOS NA SEMANA', type: 'fitness', xp: 50 },
+            { id: 'w4', label: '📊 FINANÇAS: REVISÃO SEMANAL', type: 'disciplina', xp: 30 }
+        ];
+
+        let radarChart;
+        let lineChart;
+
+        // --- Charts Initialization ---
+        function initCharts() {
+            // Radar
+            const ctxR = document.getElementById('radarChart').getContext('2d');
+            radarChart = new Chart(ctxR, {
+                type: 'radar',
+                data: {
+                    labels: ['FOCO', 'FITNESS', 'CONSISTÊNCIA', 'SOCIAL', 'CONQUISTAS', 'DISCIPLINA'],
+                    datasets: [{
+                        data: Object.values(stats),
+                        backgroundColor: 'rgba(0, 243, 255, 0.2)',
+                        borderColor: '#00f3ff', borderWidth: 2, pointRadius: 2
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            grid: { color: '#003d4d' }, angleLines: { color: '#003d4d' },
+                            pointLabels: { color: '#00f3ff', font: { size: 9 } },
+                            ticks: { display: false, max: 100, min: 0 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Line Chart (History)
+            const ctxL = document.getElementById('lineChart').getContext('2d');
+
+            // Prepare labels ("S1", "S2"...) and data arrays
+            let labels = historyStats.map((_, i) => 'W' + (i + 1));
+            // Add current state as the last point
+            labels.push('NOW');
+
+            let datasetFoco = historyStats.map(h => h.foco); datasetFoco.push(stats.foco);
+            let datasetFit = historyStats.map(h => h.fitness); datasetFit.push(stats.fitness);
+            let datasetDisc = historyStats.map(h => h.disciplina); datasetDisc.push(stats.disciplina);
+
+            lineChart = new Chart(ctxL, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'FOCO', data: datasetFoco, borderColor: '#00f3ff', tension: 0.3, borderWidth: 2, pointRadius: 1 },
+                        { label: 'FITNESS', data: datasetFit, borderColor: '#ff003c', tension: 0.3, borderWidth: 2, pointRadius: 1 },
+                        { label: 'DISCIPLINA', data: datasetDisc, borderColor: '#ffaa00', tension: 0.3, borderWidth: 2, pointRadius: 1 }
+                    ]
+                },
+                options: {
+                    scales: {
+                        x: { grid: { color: '#001a23' }, ticks: { color: '#555', font: { size: 8 } } },
+                        y: { grid: { color: '#001a23' }, ticks: { color: '#555', font: { size: 8 }, max: 100, min: 0 } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#aaa', font: { size: 9, family: 'Orbitron' }, boxWidth: 10 } }
+                    }
+                }
+            });
+        }
+
+        // --- Navigation ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            if (document.getElementById('btn-' + screenId)) {
+                document.getElementById('btn-' + screenId).classList.add('active');
+            }
+        }
+
+        // --- Core Logic & Rendering ---
+        function checkComboDaily() {
+            const today = new Date().toDateString();
+            if (lastComboCheck !== today) {
+                // Determine if all 'CÉREBRO' missions were done yesterday
+                // Instead of yesterday strict check, we just verify if they are all done right now before we run reset (which happens automatically below).
+                // Actually, a better approach: when checking dailies, if it's a new day, we look at the saved state *before* clearing.
+                const dDone = JSON.parse(localStorage.getItem('completedDailies') || '[]');
+
+                // Cérebro missions are st1 to st5
+                const cerebroIds = ['st1', 'st2', 'st3', 'st4', 'st5'];
+                const allCerebroDone = cerebroIds.every(id => dDone.includes(id));
+
+                if (allCerebroDone && dDone.length > 0) {
+                    cerebroCombo++;
+                } else {
+                    cerebroCombo = 0; // Lost combo
+                }
+
+                localStorage.setItem('cerebroCombo', cerebroCombo);
+                localStorage.setItem('lastComboCheck', today);
+            }
+
+            const comboEl = document.getElementById('combo-display');
+            if (cerebroCombo >= 3) {
+                comboEl.style.display = 'block';
+                comboEl.innerText = `[ COMBO CÉREBRO ATIVO: ${cerebroCombo} DIAS (1.5x) ]`;
+            } else {
+                comboEl.style.display = 'none';
+            }
+        }
+
+        function renderLists() {
+            const today = new Date().toDateString();
+
+            // Check combo before resetting lists for a new day
+            if (localStorage.getItem('lastResetDate') !== today && localStorage.getItem('lastResetDate') !== null) {
+                checkComboDaily();
+            }
+
+            // Dailies Daily Reset
+            const dList = document.getElementById('daily-list');
+            const dDone = JSON.parse(localStorage.getItem('completedDailies') || '[]');
+
+            if (localStorage.getItem('lastResetDate') !== today) {
+                localStorage.setItem('completedDailies', '[]');
+                localStorage.setItem('lastResetDate', today);
+                return renderLists();
+            }
+
+            dList.innerHTML = dailyMissions.map(m => {
+                const isDone = dDone.includes(m.id);
+                // Special rendering for st1 (Deep Work)
+                if (m.id === 'st1' && !isDone) {
+                    return `
+                    <div class="card">
+                        <p style="font-size:0.75rem; margin:0 0 10px 0;">[ ${m.label} ]</p>
+                        <button class="btn-action btn-deepwork" onclick="startDeepWork()">INICIAR DEEP WORK (60 MIN)</button>
+                    </div>`;
+                }
+
+                return `
+                <div class="card ${isDone ? 'done' : ''}">
+                    <p style="font-size:0.75rem; margin:0 0 10px 0;">[ ${m.label} ]</p>
+                    <button class="btn-action" onclick="completeQuest('${m.id}', '${m.type}', ${m.xp}, 'daily')">
+                        ${isDone ? 'EXECUTADO' : 'CONFIRMAR (' + m.xp + ' XP)'}
+                    </button>
+                </div>`;
+            }).join('');
+
+            // Weeklies
+            const wList = document.getElementById('weekly-list');
+            const wDone = JSON.parse(localStorage.getItem('completedWeeklies') || '[]');
+            wList.innerHTML = weeklyMissions.map(m => `
+                <div class="card weekly ${wDone.includes(m.id) ? 'done' : ''}">
+                    <p style="font-size:0.75rem; margin:0 0 10px 0;">[ ${m.label} ]</p>
+                    <button class="btn-action btn-weekly" onclick="completeQuest('${m.id}', '${m.type}', ${m.xp}, 'weekly')">
+                        ${wDone.includes(m.id) ? 'COMPLETA' : 'EXECUTAR SEMANAL'}
+                    </button>
+                </div>`).join('');
+
+            checkComboDaily();
+        }
+
+        function completeQuest(id, type, base_xp, cat) {
+            let key = cat === 'daily' ? 'completedDailies' : 'completedWeeklies';
+            let done = JSON.parse(localStorage.getItem(key) || '[]');
+            if (!done.includes(id)) {
+                done.push(id);
+                localStorage.setItem(key, JSON.stringify(done));
+
+                // Track Streak
+                if (cat === 'daily') {
+                    const today = new Date().toDateString();
+                    if (localStorage.getItem('lastCheckIn') !== today) {
+                        let s = (parseInt(localStorage.getItem('streakCounter')) || 0) + 1;
+                        localStorage.setItem('streakCounter', s);
+                        localStorage.setItem('lastCheckIn', today);
+                    }
+                }
+
+                // Apply Multiplier if Combo is active and it's a focus/cérebro related quest
+                let final_xp = base_xp;
+                if (cerebroCombo >= 3) {
+                    final_xp = base_xp * 1.5;
+                }
+
+                stats[type] = Math.min(stats[type] + (final_xp / 10), 100);
+                localStorage.setItem('nexusStats', JSON.stringify(stats));
+
+                // Update UI visually instantly
+                radarChart.data.datasets[0].data = Object.values(stats);
+                radarChart.update();
+
+                // Update Line Chart's 'NOW' point
+                let lastIdx = lineChart.data.labels.length - 1;
+                lineChart.data.datasets[0].data[lastIdx] = stats.foco;
+                lineChart.data.datasets[1].data[lastIdx] = stats.fitness;
+                lineChart.data.datasets[2].data[lastIdx] = stats.disciplina;
+                lineChart.update();
+
+                renderLists();
+                updateStreakDisplay();
+            }
+        }
+
+        function updateStreakDisplay() {
+            document.getElementById('streak-display').innerText = `🔥 STREAK: ${localStorage.getItem('streakCounter') || 0} DAYS`;
+        }
+
+        function triggerWeeklyReset() {
+            if (confirm("Deseja salvar o progresso atual no Histórico e resetar a semana?")) {
+                // Save Snapshot
+                historyStats.push(JSON.parse(JSON.stringify(stats)));
+                localStorage.setItem('nexusHistory', JSON.stringify(historyStats));
+
+                // Reset Weeklies
+                localStorage.setItem('completedWeeklies', '[]');
+
+                location.reload(); // Reload to redraw charts easily
+            }
+        }
+
+        function resetAll() { if (confirm("PURGE TOTAL: Isso apagará combos, histórico, xp e missões. Continuar?")) { localStorage.clear(); location.reload(); } }
+
+        // --- Deep Work System ---
+        let dwInterval;
+        let dwTimeLeft = 60 * 60; // 60 mins
+
+        function startDeepWork() {
+            document.getElementById('main-nav').style.display = 'none';
+            document.getElementById('deepwork').classList.add('active');
+            document.getElementById('timer-ring').style.display = 'block';
+
+            // Try to play audio
+            const audio = document.getElementById('focus-audio');
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log("Audio autoplay blocked, click the screen to enable."));
+
+            dwTimeLeft = 60 * 60;
+            updateTimerDisplay();
+
+            dwInterval = setInterval(() => {
+                dwTimeLeft--;
+                updateTimerDisplay();
+                if (dwTimeLeft <= 0) {
+                    finishDeepWork();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            let m = Math.floor(dwTimeLeft / 60).toString().padStart(2, '0');
+            let s = (dwTimeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${m}:${s}`;
+        }
+
+        function abortDeepWork() {
+            clearInterval(dwInterval);
+            document.getElementById('focus-audio').pause();
+            document.getElementById('deepwork').classList.remove('active');
+            document.getElementById('main-nav').style.display = 'flex';
+            document.getElementById('timer-ring').style.display = 'none';
+        }
+
+        function finishDeepWork() {
+            abortDeepWork();
+            // Complete st1 
+            completeQuest('st1', 'foco', 15, 'daily');
+            alert("SISTEMA: Deep Work Concluído. XP Adicionado.");
+        }
+
+
+        // --- Sarcastic IA Notifications ---
+        const sarcasmMessages = {
+            foco: "O cérebro tá derretendo no TikTok? Vai estudar antes que você esqueça seu próprio nome.",
+            fitness: "O radar de Fitness tá parecendo um deserto. Vai treinar ou quer que eu peça uma pizza pra combinar com o sedentarismo?",
+            consistencia: "Você é mais inconstante que o clima de São Paulo. Que tal cumprir uma promessa hoje?",
+            social: "Ermitão alert! Vai falar com um humano antes que você perca a habilidade.",
+            conquistas: "Sem vitórias hoje? Tá querendo viver no tutorial pra sempre?",
+            disciplina: "A disciplina mandou abraços antes de fugir de você. Volta pro plano!"
+        };
+
+        let notificationTimer;
+
+        function requestNotificationPermission() {
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === 'hidden') {
+                // Set timer for 5 minutes (300,000 ms)
+                notificationTimer = setTimeout(() => {
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        // Find lowest stat
+                        let lowestStat = Object.keys(stats).reduce((a, b) => stats[a] < stats[b] ? a : b);
+
+                        new Notification("NEXUS OS | AVISO DA IA", {
+                            body: sarcasmMessages[lowestStat] || "Para de enrolar e volta pro sistema.",
+                            icon: "https://cdn-icons-png.flaticon.com/512/8066/8066504.png" // generic robot
+                        });
+                    }
+                }, 5 * 60 * 1000);
+            } else {
+                clearTimeout(notificationTimer);
+            }
+        });
+
+        // Initialize Everything
+        window.onload = () => {
+            initCharts();
+            renderLists();
+            updateStreakDisplay();
+            requestNotificationPermission();
+        };
+
+    </script>
+</body>
+
+</html>
